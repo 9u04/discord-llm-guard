@@ -1,4 +1,4 @@
-import { APP_CONFIG } from "./config.js";
+import { APP_CONFIG, applyConfigOverride } from "./config.js";
 import { MOCK_REPORTS, MOCK_STATUS } from "./mock-data.js";
 
 const AUTH_STORAGE_KEY = "llm-guard-auth";
@@ -251,6 +251,29 @@ const loadDashboard = async () => {
   if (refreshBtn) refreshBtn.disabled = false;
 };
 
+const loadRuntimeConfig = async () => {
+  try {
+    const response = await fetch("/api/config", {
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!response.ok) return;
+    const data = await response.json();
+    if (!data || typeof data !== "object") return;
+    const hasAuth =
+      data.auth &&
+      (typeof data.auth.username === "string" ||
+        typeof data.auth.password === "string");
+    if (!hasAuth && !data.apiBaseUrl && !data.appTitle) return;
+    applyConfigOverride({
+      appTitle: data.appTitle,
+      apiBaseUrl: data.apiBaseUrl,
+      auth: data.auth,
+    });
+  } catch (error) {
+    // Ignore runtime config errors and keep defaults.
+  }
+};
+
 const render = () => {
   if (isAuthed()) {
     renderDashboard();
@@ -259,5 +282,13 @@ const render = () => {
   }
 };
 
-render();
+const bootstrap = async () => {
+  if (typeof window !== "undefined" && window.APP_CONFIG_OVERRIDE) {
+    applyConfigOverride(window.APP_CONFIG_OVERRIDE);
+  }
+  await loadRuntimeConfig();
+  render();
+};
+
+bootstrap();
 

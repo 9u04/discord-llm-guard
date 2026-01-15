@@ -7,13 +7,12 @@ export const APP_CONFIG = {
   apiBaseUrl: "",
 };
 
-if (typeof window !== "undefined" && window.APP_CONFIG_OVERRIDE) {
-  const override = window.APP_CONFIG_OVERRIDE;
+export const applyConfigOverride = (override = {}) => {
   APP_CONFIG.appTitle = override.appTitle ?? APP_CONFIG.appTitle;
   APP_CONFIG.apiBaseUrl = override.apiBaseUrl ?? APP_CONFIG.apiBaseUrl;
   APP_CONFIG.auth = {
     ...APP_CONFIG.auth,
     ...(override.auth ?? {}),
   };
-}
+};
 
