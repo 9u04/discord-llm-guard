@@ -10,6 +10,7 @@ const state = {
   statusSource: "mock",
   reportsSource: "mock",
   isLoading: false,
+  selectedReportIndex: null,
 };
 
 const formatDate = (value) => {
@@ -27,6 +28,30 @@ const getBadge = (value) => {
     return { label: "异常", tone: "err" };
   }
   return { label: value || "未知", tone: "warn" };
+};
+
+const getResultBadge = (decision) => {
+  if (decision === "BAN") {
+    return { label: "BAN", tone: "err" };
+  }
+  if (decision === "NEED_GM") {
+    return { label: "需要GM", tone: "warn" };
+  }
+  if (decision === "INVALID_REPORT") {
+    return { label: "无需处理", tone: "ok" };
+  }
+  return { label: decision || "未知", tone: "warn" };
+};
+
+const normalizeHistory = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    return [];
+  }
 };
 
 const getApiUrl = (path) => {
@@ -188,35 +213,105 @@ const renderHistory = () => {
       <thead>
         <tr>
           <th>ID</th>
+          <th>时间</th>
           <th>举报人</th>
           <th>被举报人</th>
-          <th>原因</th>
-          <th>判定</th>
-          <th>动作</th>
-          <th>状态</th>
-          <th>时间</th>
+          <th>举报附言（原因）</th>
+          <th>处理结果</th>
         </tr>
       </thead>
       <tbody>
         ${state.reports
-          .map((item) => {
-            const statusBadge = getBadge(item.status);
+          .map((item, index) => {
+            const resultBadge = getResultBadge(item.llm_decision);
+            const isSelected = state.selectedReportIndex === index;
             return `
-              <tr>
+              <tr class="report-row ${isSelected ? "is-selected" : ""}" data-report-index="${index}">
                 <td>${item.id ?? "-"}</td>
+                <td>${formatDate(item.created_at)}</td>
                 <td>${item.reporter_name ?? "-"}</td>
                 <td>${item.reported_user_name ?? "-"}</td>
                 <td>${item.report_reason ?? "-"}</td>
-                <td>${item.llm_decision ?? "-"}</td>
-                <td>${item.action_taken ?? "-"}</td>
-                <td><span class="badge ${statusBadge.tone}">${statusBadge.label}</span></td>
-                <td>${formatDate(item.created_at)}</td>
+                <td><span class="result-badge ${resultBadge.tone}">${resultBadge.label}</span></td>
               </tr>
             `;
           })
           .join("")}
       </tbody>
     </table>
+    <div id="report-detail" class="detail-panel"></div>
+  `;
+
+  document.querySelectorAll(".report-row").forEach((row) => {
+    row.addEventListener("click", () => {
+      const index = Number(row.dataset.reportIndex);
+      if (Number.isNaN(index)) return;
+      state.selectedReportIndex =
+        state.selectedReportIndex === index ? null : index;
+      renderHistory();
+    });
+  });
+
+  renderReportDetail();
+};
+
+const renderReportDetail = () => {
+  const detailEl = document.getElementById("report-detail");
+  if (!detailEl) return;
+  if (state.selectedReportIndex === null) {
+    detailEl.innerHTML = `<div class="muted">点击记录查看详情</div>`;
+    return;
+  }
+  const report = state.reports[state.selectedReportIndex];
+  if (!report) {
+    detailEl.innerHTML = `<div class="muted">未找到对应记录</div>`;
+    return;
+  }
+  const historyItems = normalizeHistory(report.reported_user_history);
+  const historyHtml = historyItems.length
+    ? `<ul class="history-list">
+        ${historyItems
+          .map(
+            (item) =>
+              `<li><span class="muted">${formatDate(
+                item.created_at
+              )}</span> ${item.content || "(空消息)"}</li>`
+          )
+          .join("")}
+      </ul>`
+    : `<div class="muted">暂无历史消息</div>`;
+  const resultBadge = getResultBadge(report.llm_decision);
+
+  detailEl.innerHTML = `
+    <div class="detail-header">
+      <div>
+        <strong>详情</strong>
+        <span class="muted">#${report.id ?? "-"}</span>
+      </div>
+      <span class="result-badge ${resultBadge.tone}">${resultBadge.label}</span>
+    </div>
+    <div class="detail-grid">
+      <div>
+        <div class="detail-label">被举报消息</div>
+        <div class="detail-content">${report.reported_message_content ?? "-"}</div>
+        ${
+          report.reported_message_url
+            ? `<a class="detail-link" href="${report.reported_message_url}" target="_blank">跳转消息</a>`
+            : ""
+        }
+      </div>
+      <div>
+        <div class="detail-label">举报附言</div>
+        <div class="detail-content">${report.report_reason ?? "-"}</div>
+      </div>
+      <div>
+        <div class="detail-label">LLM 分析</div>
+        <div class="detail-content">${report.llm_reasoning ?? "-"}</div>
+        <div class="muted">置信度：${report.llm_confidence ?? "-"}</div>
+      </div>
+    </div>
+    <div class="detail-label" style="margin-top: 12px;">被举报历史消息</div>
+    ${historyHtml}
   `;
 };
 

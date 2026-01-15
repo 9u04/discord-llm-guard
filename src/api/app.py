@@ -42,6 +42,7 @@ def _serialize_report(report: ReportLog) -> dict[str, Any]:
         "reported_message_content": report.reported_message_content,
         "reported_message_url": report.reported_message_url,
         "report_reason": report.report_reason,
+        "reported_user_history": report.reported_user_history,
         "llm_decision": report.llm_decision,
         "llm_confidence": report.llm_confidence,
         "llm_reasoning": report.llm_reasoning,

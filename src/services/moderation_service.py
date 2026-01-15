@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import discord
 
 from src.config import get_settings
@@ -60,6 +61,7 @@ async def handle_report(
             reported_member,
             reported_message,
             report_reason,
+            user_history,
         )
     except Exception as exc:  # pragma: no cover
         print(f"[DB] create_report failed: {type(exc).__name__}: {exc}")
@@ -162,6 +164,7 @@ def _create_report_sync(
     reported_member: discord.Member,
     reported_message: discord.Message,
     report_reason: str,
+    user_history: list[dict],
 ) -> int:
     with get_session() as session:
         report = ReportLog(
@@ -175,6 +178,7 @@ def _create_report_sync(
             reported_message_content=reported_message.content,
             reported_message_url=reported_message.jump_url,
             report_reason=report_reason,
+            reported_user_history=json.dumps(user_history, ensure_ascii=False),
         )
         return repo.create_report(session, report)
 

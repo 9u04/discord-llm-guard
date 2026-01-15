@@ -49,6 +49,7 @@ def init_db() -> None:
     engine = _get_engine()
     Base.metadata.create_all(engine)
     _ensure_report_log_bigint(engine)
+    _ensure_report_log_history(engine)
 
 
 def _ensure_report_log_bigint(engine) -> None:
@@ -67,6 +68,23 @@ def _ensure_report_log_bigint(engine) -> None:
                 conn.execute(text(stmt))
             except Exception:
                 # Ignore when table/column does not exist yet or type is already BIGINT.
+                continue
+
+
+def _ensure_report_log_history(engine) -> None:
+    statements = []
+    if engine.dialect.name == "postgresql":
+        statements.append(
+            "ALTER TABLE report_logs ADD COLUMN IF NOT EXISTS reported_user_history TEXT"
+        )
+    else:
+        statements.append("ALTER TABLE report_logs ADD COLUMN reported_user_history TEXT")
+    with engine.begin() as conn:
+        for stmt in statements:
+            try:
+                conn.execute(text(stmt))
+            except Exception:
+                # Ignore if column already exists or table not created yet.
                 continue
 
 

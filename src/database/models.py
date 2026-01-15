@@ -28,6 +28,7 @@ class ReportLog(Base):
     reported_message_content: Mapped[str | None] = mapped_column(Text)
     reported_message_url: Mapped[str | None] = mapped_column(Text)
     report_reason: Mapped[str | None] = mapped_column(Text)
+    reported_user_history: Mapped[str | None] = mapped_column(Text)
 
     llm_decision: Mapped[str | None] = mapped_column(String(32))
     llm_confidence: Mapped[float | None] = mapped_column(Float)
