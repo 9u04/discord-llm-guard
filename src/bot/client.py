@@ -5,6 +5,8 @@ from typing import Optional
 import discord
 from discord.ext import commands
 
+from src.bot.events import register_event_handlers
+
 
 class LLMGuardBot(commands.Bot):
     """Discord bot client."""
@@ -20,6 +22,7 @@ class LLMGuardBot(commands.Bot):
     async def setup_hook(self) -> None:
         """Called before the bot connects."""
         print("Bot initializing...")
+        register_event_handlers(self)
 
     async def on_ready(self) -> None:
         """Called when the bot is ready."""

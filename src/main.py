@@ -6,6 +6,7 @@ from pathlib import Path
 
 from src.bot.client import get_bot
 from src.config import get_settings
+from src.database import init_db
 
 
 async def main() -> None:
@@ -16,6 +17,7 @@ async def main() -> None:
 
     data_dir = Path("data")
     data_dir.mkdir(parents=True, exist_ok=True)
+    init_db()
 
     bot = get_bot()
     try:

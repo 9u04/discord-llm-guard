@@ -228,17 +228,57 @@ BAN_DELETE_DAYS=7
 ---
 
 ## 时间/版本
-- 2026-01-15
+- 2026-01-15 (最终更新)
+- 2026-01-15 (事件处理与核心服务骨架)
+- 2026-01-15 (接入真实 LLM)
+- 2026-01-15 (真实 LLM 测试数据库与脚本)
 
 ## 修改内容
+- ✅ **配置验证完成**：Discord Token 和 GM Role ID 已正确配置
+- ✅ **连接测试通过**：创建了 `test_bot_quick.py` 和 `test_bot_enhanced.py` 用于快速验证
+- ✅ **消息流程文档**：创建了完整的消息推送流程说明
+  - `BOT_MESSAGE_FLOW.md` - 详细的流程图和说明
+  - `BOT_MESSAGE_FLOW_CODE.py` - 完整的实现示例代码
 - 初始化项目结构与基础文件
 - 添加配置管理、Bot 客户端与入口文件骨架
 - 添加部署配置与基础文档
+- ✅ **事件处理上线**：实现 `@Bot + 引用消息` 的举报解析与校验
+- ✅ **服务骨架完善**：新增 Discord/LLM/审核服务的最小可用流程
+- ✅ **Prompt 模板**：生成 LLM 分析请求的基础模板
+- ✅ **Prompt 强化**：补充“仅输出 JSON”约束
+- ✅ **工具函数**：补充 bot mention 清理与默认举报理由
+- ✅ **LLM 实际接入**：使用 OpenAI 兼容 SDK 调用真实 LLM
+- ✅ **结果解析**：支持 JSON 解析与异常降级到 NEED_GM
+- ✅ **真实 LLM 测试**：新增 `scripts/llm_real_test.py` 与本地测试数据库
+- ✅ **JSON 输出保障**：LLM 调用优先使用 json_object 模式
+- ✅ **解析兜底**：非 JSON 输出时尝试关键词判定
+- ✅ **调试开关**：`LLM_DEBUG_RAW=1` 输出原始返回
+- ✅ **字段兼容**：支持 `conclusion/reason` 等别名
+- ✅ **数据库落库**：新增举报日志表与记录流程（Railway 内部 PostgreSQL）
+- ✅ **DB 稳定性**：连接池参数与 SQLite 线程配置
+- ✅ **DB 性能**：将阻塞写入切换为后台线程
 
 ## 当前进度
 - 阶段一：基础框架（✅ 完成）
-- 待办：阶段二核心服务、阶段三事件处理、阶段四数据库与日志、阶段五部署与文档
+  - ✅ 项目结构初始化
+  - ✅ 环境配置验证
+  - ✅ Bot 连接测试通过
+- 阶段二：核心服务与事件处理（🟡 进行中）
+  - ✅ 事件处理与举报校验
+  - ✅ Discord/LLM/审核服务骨架
+- ✅ 真实 LLM 接入与判定策略（基础）
+- 阶段四：数据库与日志（🟡 进行中）
+  - ✅ 举报日志表与落库流程
+- 待办：阶段五部署与文档
 - 已推送到 GitHub：git@github.com:9u04/discord-llm-guard.git
+
+## 测试工具
+| 工具 | 功能 | 用途 |
+|-----|------|------|
+| `test_bot_quick.py` | 快速配置验证 | 检查 .env 文件是否正确配置 token 和 role id |
+| `test_bot_enhanced.py` | 详细连接测试 | 实际连接 Discord，验证 token 有效性和网络连接 |
+| `test_bot_connection.py` | 标准连接测试 | 标准的连接验证脚本 |
+| `scripts/llm_real_test.py` | 真实 LLM 测试 | 生成本地测试 DB 并验证 Prompt/解析 |
 
 ## 上下文快照
 - 采用 Python + discord.py + SQLAlchemy ORM
@@ -246,6 +286,14 @@ BAN_DELETE_DAYS=7
 - Railway 生产：PostgreSQL（Railway 免费插件，自动生成 DATABASE_URL）
 - LLM 接口兼容 OpenAI
 - 目录结构已预留 bot/services/database/prompts/config/utils 等模块
+- 事件层已支持引用举报解析与基础错误提示
+- 审核服务已串联 Discord 数据收集 → Prompt → LLM → 动作分发
+- LLM 服务已接入真实 API，并要求 JSON 输出进行解析
+- LLM 输出优先启用 json_object 模式，解析稳定性提升
+- 非 JSON 输出时支持关键词兜底解析
+- 已增加举报日志表字段，为后续前端状态/历史查询预留
+- 数据库写入改为线程执行，避免阻塞 Bot 事件循环
+- 已提供真实 LLM 测试脚本，默认写入 `data/llm_real_test.db`
 
 ## Railway 部署说明
 
