@@ -11,6 +11,7 @@ const state = {
   reportsSource: "mock",
   isLoading: false,
   selectedReportIndex: null,
+  lastFetchedAt: null,
 };
 
 const formatDate = (value) => {
@@ -130,20 +131,20 @@ const renderDashboard = () => {
       <div>
         <div class="title">${APP_CONFIG.appTitle}</div>
         <div class="muted">服务状态与处理历史</div>
+        <div class="muted" id="fetch-time">数据拉取时间：-</div>
       </div>
       <div class="toolbar">
-        <span class="pill" id="data-source">数据来源：模拟</span>
         <button class="button secondary" id="refresh-btn">刷新</button>
         <button class="button" id="logout-btn">退出</button>
       </div>
     </div>
 
     <div class="grid two">
-      <div class="card" id="status-card">
+      <div class="card compact" id="status-card">
         <h3>服务状态</h3>
         <div class="muted">加载中...</div>
       </div>
-      <div class="card">
+      <div class="card compact" id="summary-card">
         <h3>处理概览</h3>
         <div id="summary" class="muted">加载中...</div>
       </div>
@@ -179,12 +180,13 @@ const renderStatus = () => {
   const botBadge = getBadge(state.status.bot_online);
   const dbBadge = getBadge(state.status.db_connected);
   container.innerHTML = `
-    <h3>服务状态</h3>
-    <div style="margin: 12px 0;">
-      <span class="badge ${botBadge.tone}">Bot ${botBadge.label}</span>
-      <span class="badge ${dbBadge.tone}" style="margin-left: 8px;">数据库 ${dbBadge.label}</span>
+    <div class="status-header">
+      <h3>服务状态</h3>
+      <div class="status-badges">
+        <span class="badge ${botBadge.tone}">Bot ${botBadge.label}</span>
+        <span class="badge ${dbBadge.tone}">数据库 ${dbBadge.label}</span>
+      </div>
     </div>
-    <div class="muted">心跳时间：${formatDate(state.status.last_heartbeat)}</div>
     <div class="muted">队列待处理：${state.status.queue_depth ?? "-"}</div>
     <div class="muted">服务中的服务器：${state.status.active_guilds ?? "-"}</div>
   `;
@@ -193,12 +195,18 @@ const renderStatus = () => {
 const renderSummary = () => {
   const summaryEl = document.getElementById("summary");
   const total = state.reports.length;
-  const done = state.reports.filter((item) => item.status === "DONE").length;
-  const failed = state.reports.filter((item) => item.status === "FAILED").length;
+  const banCount = state.reports.filter(
+    (item) => item.llm_decision === "BAN"
+  ).length;
+  const invalidCount = state.reports.filter(
+    (item) => item.llm_decision === "INVALID_REPORT"
+  ).length;
+  const gmCount = state.reports.filter(
+    (item) => item.llm_decision === "NEED_GM"
+  ).length;
   summaryEl.innerHTML = `
     <div class="muted">总记录：${total}</div>
-    <div class="muted">已完成：${done}</div>
-    <div class="muted">失败：${failed}</div>
+    <div class="muted">封禁数：${banCount} / 放行数：${invalidCount} / 人工介入数：${gmCount}</div>
   `;
 };
 
@@ -315,13 +323,10 @@ const renderReportDetail = () => {
   `;
 };
 
-const renderSource = () => {
-  const sourceEl = document.getElementById("data-source");
-  const source =
-    state.statusSource === "api" || state.reportsSource === "api"
-      ? "API"
-      : "模拟";
-  sourceEl.textContent = `数据来源：${source}`;
+const renderFetchTime = () => {
+  const el = document.getElementById("fetch-time");
+  if (!el) return;
+  el.textContent = `数据拉取时间：${formatDate(state.lastFetchedAt)}`;
 };
 
 const loadDashboard = async () => {
@@ -338,10 +343,11 @@ const loadDashboard = async () => {
     : reportsResult.data?.items ?? [];
   state.statusSource = statusResult.source;
   state.reportsSource = reportsResult.source;
+  state.lastFetchedAt = new Date().toISOString();
   renderStatus();
   renderSummary();
   renderHistory();
-  renderSource();
+  renderFetchTime();
   state.isLoading = false;
   if (refreshBtn) refreshBtn.disabled = false;
 };
