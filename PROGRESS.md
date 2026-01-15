@@ -97,10 +97,115 @@ discord-llm-guard/
 | 阶段 | 任务 | 预期交付 |
 |------|------|---------|
 | 一 | 基础框架搭建 | 目录结构、配置管理、Bot 客户端骨架 |
-| 二 | 核心服务实现 | Discord 服务、LLM 服务、审核服务、Prompt 模板 |
-| 三 | 事件处理和动作执行 | 消息监听、命令解析、执行封禁/回复 |
+| 二 | Bot 核心部分开发 | 配置、事件处理、Discord 服务、LLM 服务（占位）、审核服务 |
+| 三 | 事件处理和动作执行 | 消息监听完善、命令解析、执行封禁/回复 |
 | 四 | 数据库和日志 | SQLAlchemy ORM 集成、审核日志记录、错误处理 |
 | 五 | 部署和文档 | Dockerfile 完善、Railway 部署测试、使用文档 |
+
+## Bot 开发详细规划（阶段二）
+
+### 开发原则
+**先调试 Bot 核心部分，再接入复杂的 LLM/数据库**
+
+### 分层开发顺序
+
+**第一层：Bot 客户端 + 基础事件处理**
+```
+src/config/settings.py        ← 配置管理（Discord/LLM/数据库）
+    ↓
+src/bot/client.py            ← Bot 客户端初始化
+    ↓
+src/bot/events.py            ← 消息事件监听、@mention 解析、引用消息提取
+    ↓
+src/main.py                  ← 启动 Bot
+```
+**目标**：Bot 能正常上线，正确解析 @mention + 引用消息
+
+**第二层：Discord 服务（API 封装）**
+```
+src/services/discord_service.py
+  ├── get_user_info()           # 获取用户ID、注册时间
+  ├── get_member_info()         # 获取加入时间、角色
+  ├── get_message_history()     # 获取用户最近10条消息
+  ├── send_reply()              # 回复消息（支持@提及）
+  └── ban_member()              # 执行封禁、删除消息
+```
+**目标**：能通过 Discord API 获取和操作数据
+
+**第三层：LLM 服务（占位实现）**
+```
+src/services/llm_service.py
+  ├── analyze_report()          # 分析举报（先返回模拟结果）
+  └── 返回判定：BAN / INVALID_REPORT / NEED_GM
+```
+**目标**：完整流程能跑通，用模拟数据测试
+
+**第四层：Prompt 模板**
+```
+src/prompts/templates.py
+  └── 设计清晰的 Prompt，包含被举报消息、历史记录、账号信息
+```
+**目标**：LLM 能准确分析
+
+**第五层：审核业务逻辑**
+```
+src/services/moderation_service.py
+  ├── 流程编排：收集信息 → LLM 分析 → 执行动作
+  ├── 动作执行：BAN / 驳回 / @GM
+  └── 返回结果
+```
+**目标**：完整的审核流程运行
+
+### 分阶段测试计划
+
+**✅ 测试轮次 1（配置 + 事件处理）**
+```bash
+python -m src.main
+# 在 Discord 频道：@Bot 发送消息（带引用）
+# 验证：
+#   - Bot 能上线
+#   - 控制台打印解析结果（举报人、被举报人、附言）
+```
+
+**✅ 测试轮次 2（+ Discord 服务）**
+```bash
+# 在频道发起举报
+# 验证：
+#   - 获取用户信息正确
+#   - 历史消息能取到
+#   - 控制台打印信息完整
+```
+
+**✅ 测试轮次 3（+ LLM 服务占位）**
+```bash
+# 使用模拟 LLM 返回
+# 验证：
+#   - 完整流程能运行
+#   - 根据模拟结果执行动作
+#   - 回复消息格式正确
+```
+
+**✅ 测试轮次 4（+ 真实 LLM）**
+```bash
+# 使用真实 OpenAI API
+# 验证：
+#   - LLM 分析结果合理
+#   - 三类判定正确处理
+#   - 封禁/驳回/GM通知逻辑正确
+```
+
+### 开发文件清单
+
+| 优先级 | 文件 | 功能 | 状态 |
+|--------|------|------|------|
+| P0 | src/config/settings.py | 配置管理 | 🟡 需更新 |
+| P0 | src/bot/events.py | 事件处理 | 🔴 待开发 |
+| P1 | src/services/discord_service.py | Discord API | 🔴 待开发 |
+| P1 | src/services/llm_service.py | LLM 调用 | 🔴 待开发 |
+| P2 | src/prompts/templates.py | Prompt 模板 | 🔴 待开发 |
+| P2 | src/services/moderation_service.py | 审核逻辑 | 🔴 待开发 |
+| P3 | src/database/models.py | 数据模型 | ⏸️ 暂不开发 |
+| P3 | src/database/repository.py | 数据访问 | ⏸️ 暂不开发 |
 
 ## 环境变量配置
 
