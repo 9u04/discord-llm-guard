@@ -1,0 +1,14 @@
+# Discord
+discord.py>=2.3.0
+
+# LLM (compatible with OpenAI-like APIs)
+openai>=1.0.0
+
+# Database
+aiosqlite>=0.19.0
+
+# Configuration
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+python-dotenv>=1.0.0
+
