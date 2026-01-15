@@ -48,6 +48,26 @@ def init_db() -> None:
     """Initialize database tables."""
     engine = _get_engine()
     Base.metadata.create_all(engine)
+    _ensure_report_log_bigint(engine)
+
+
+def _ensure_report_log_bigint(engine) -> None:
+    if engine.dialect.name != "postgresql":
+        return
+    alter_statements = (
+        "ALTER TABLE report_logs ALTER COLUMN guild_id TYPE BIGINT",
+        "ALTER TABLE report_logs ALTER COLUMN channel_id TYPE BIGINT",
+        "ALTER TABLE report_logs ALTER COLUMN reporter_id TYPE BIGINT",
+        "ALTER TABLE report_logs ALTER COLUMN reported_user_id TYPE BIGINT",
+        "ALTER TABLE report_logs ALTER COLUMN reported_message_id TYPE BIGINT",
+    )
+    with engine.begin() as conn:
+        for stmt in alter_statements:
+            try:
+                conn.execute(text(stmt))
+            except Exception:
+                # Ignore when table/column does not exist yet or type is already BIGINT.
+                continue
 
 
 @contextmanager

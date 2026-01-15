@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text, func
+from sqlalchemy import BigInteger, Boolean, DateTime, Float, Integer, String, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -18,13 +18,13 @@ class ReportLog(Base):
     __tablename__ = "report_logs"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    guild_id: Mapped[int | None] = mapped_column(Integer, index=True)
-    channel_id: Mapped[int | None] = mapped_column(Integer, index=True)
-    reporter_id: Mapped[int | None] = mapped_column(Integer, index=True)
+    guild_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
+    channel_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
+    reporter_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
     reporter_name: Mapped[str | None] = mapped_column(String(64))
-    reported_user_id: Mapped[int | None] = mapped_column(Integer, index=True)
+    reported_user_id: Mapped[int | None] = mapped_column(BigInteger, index=True)
     reported_user_name: Mapped[str | None] = mapped_column(String(64))
-    reported_message_id: Mapped[int | None] = mapped_column(Integer)
+    reported_message_id: Mapped[int | None] = mapped_column(BigInteger)
     reported_message_content: Mapped[str | None] = mapped_column(Text)
     reported_message_url: Mapped[str | None] = mapped_column(Text)
     report_reason: Mapped[str | None] = mapped_column(Text)
