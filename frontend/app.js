@@ -1,0 +1,263 @@
+import { APP_CONFIG } from "./config.js";
+import { MOCK_REPORTS, MOCK_STATUS } from "./mock-data.js";
+
+const AUTH_STORAGE_KEY = "llm-guard-auth";
+const root = document.getElementById("app");
+
+const state = {
+  status: null,
+  reports: [],
+  statusSource: "mock",
+  reportsSource: "mock",
+  isLoading: false,
+};
+
+const formatDate = (value) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString("zh-CN", { hour12: false });
+};
+
+const getBadge = (value) => {
+  if (value === true || value === "ONLINE" || value === "DONE") {
+    return { label: "正常", tone: "ok" };
+  }
+  if (value === false || value === "OFFLINE" || value === "FAILED") {
+    return { label: "异常", tone: "err" };
+  }
+  return { label: value || "未知", tone: "warn" };
+};
+
+const getApiUrl = (path) => {
+  const base = APP_CONFIG.apiBaseUrl?.trim();
+  if (!base) return path;
+  return `${base.replace(/\/$/, "")}${path}`;
+};
+
+const fetchJson = async (path, fallback) => {
+  try {
+    const response = await fetch(getApiUrl(path), {
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    return { data: await response.json(), source: "api" };
+  } catch (error) {
+    return { data: fallback, source: "mock" };
+  }
+};
+
+const isAuthed = () => sessionStorage.getItem(AUTH_STORAGE_KEY) === "1";
+
+const setAuthed = (value) => {
+  if (value) {
+    sessionStorage.setItem(AUTH_STORAGE_KEY, "1");
+  } else {
+    sessionStorage.removeItem(AUTH_STORAGE_KEY);
+  }
+};
+
+const renderLogin = () => {
+  root.innerHTML = `
+    <div class="card login">
+      <h1>${APP_CONFIG.appTitle}</h1>
+      <p class="muted">请输入配置的账号密码（后续将接入 Discord OAuth）。</p>
+      <form id="login-form">
+        <div class="field">
+          <label for="username">账号</label>
+          <input id="username" type="text" placeholder="输入账号" autocomplete="username" />
+        </div>
+        <div class="field">
+          <label for="password">密码</label>
+          <input id="password" type="password" placeholder="输入密码" autocomplete="current-password" />
+        </div>
+        <div class="actions">
+          <span class="muted" id="login-error"></span>
+          <button class="button" type="submit">登录</button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  const form = document.getElementById("login-form");
+  const errorEl = document.getElementById("login-error");
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value.trim();
+    if (
+      username === APP_CONFIG.auth.username &&
+      password === APP_CONFIG.auth.password
+    ) {
+      setAuthed(true);
+      render();
+      return;
+    }
+    errorEl.textContent = "账号或密码错误";
+  });
+};
+
+const renderDashboard = () => {
+  root.innerHTML = `
+    <div class="header">
+      <div>
+        <div class="title">${APP_CONFIG.appTitle}</div>
+        <div class="muted">服务状态与处理历史</div>
+      </div>
+      <div class="toolbar">
+        <span class="pill" id="data-source">数据来源：模拟</span>
+        <button class="button secondary" id="refresh-btn">刷新</button>
+        <button class="button" id="logout-btn">退出</button>
+      </div>
+    </div>
+
+    <div class="grid two">
+      <div class="card" id="status-card">
+        <h3>服务状态</h3>
+        <div class="muted">加载中...</div>
+      </div>
+      <div class="card">
+        <h3>处理概览</h3>
+        <div id="summary" class="muted">加载中...</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 20px;">
+      <div class="header" style="margin-bottom: 12px;">
+        <div>
+          <h3>处理历史</h3>
+          <div class="muted">最近 20 条记录</div>
+        </div>
+      </div>
+      <div id="history-list"></div>
+    </div>
+  `;
+
+  document.getElementById("logout-btn").addEventListener("click", () => {
+    setAuthed(false);
+    render();
+  });
+  document.getElementById("refresh-btn").addEventListener("click", () => {
+    loadDashboard();
+  });
+  loadDashboard();
+};
+
+const renderStatus = () => {
+  const container = document.getElementById("status-card");
+  if (!state.status) {
+    container.innerHTML = `<h3>服务状态</h3><div class="muted">暂无数据</div>`;
+    return;
+  }
+  const botBadge = getBadge(state.status.bot_online);
+  const dbBadge = getBadge(state.status.db_connected);
+  container.innerHTML = `
+    <h3>服务状态</h3>
+    <div style="margin: 12px 0;">
+      <span class="badge ${botBadge.tone}">Bot ${botBadge.label}</span>
+      <span class="badge ${dbBadge.tone}" style="margin-left: 8px;">数据库 ${dbBadge.label}</span>
+    </div>
+    <div class="muted">心跳时间：${formatDate(state.status.last_heartbeat)}</div>
+    <div class="muted">队列待处理：${state.status.queue_depth ?? "-"}</div>
+    <div class="muted">服务中的服务器：${state.status.active_guilds ?? "-"}</div>
+  `;
+};
+
+const renderSummary = () => {
+  const summaryEl = document.getElementById("summary");
+  const total = state.reports.length;
+  const done = state.reports.filter((item) => item.status === "DONE").length;
+  const failed = state.reports.filter((item) => item.status === "FAILED").length;
+  summaryEl.innerHTML = `
+    <div class="muted">总记录：${total}</div>
+    <div class="muted">已完成：${done}</div>
+    <div class="muted">失败：${failed}</div>
+  `;
+};
+
+const renderHistory = () => {
+  const container = document.getElementById("history-list");
+  if (!state.reports.length) {
+    container.innerHTML = `<div class="empty">暂无历史记录</div>`;
+    return;
+  }
+  container.innerHTML = `
+    <table class="table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>举报人</th>
+          <th>被举报人</th>
+          <th>原因</th>
+          <th>判定</th>
+          <th>动作</th>
+          <th>状态</th>
+          <th>时间</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${state.reports
+          .map((item) => {
+            const statusBadge = getBadge(item.status);
+            return `
+              <tr>
+                <td>${item.id ?? "-"}</td>
+                <td>${item.reporter_name ?? "-"}</td>
+                <td>${item.reported_user_name ?? "-"}</td>
+                <td>${item.report_reason ?? "-"}</td>
+                <td>${item.llm_decision ?? "-"}</td>
+                <td>${item.action_taken ?? "-"}</td>
+                <td><span class="badge ${statusBadge.tone}">${statusBadge.label}</span></td>
+                <td>${formatDate(item.created_at)}</td>
+              </tr>
+            `;
+          })
+          .join("")}
+      </tbody>
+    </table>
+  `;
+};
+
+const renderSource = () => {
+  const sourceEl = document.getElementById("data-source");
+  const source =
+    state.statusSource === "api" || state.reportsSource === "api"
+      ? "API"
+      : "模拟";
+  sourceEl.textContent = `数据来源：${source}`;
+};
+
+const loadDashboard = async () => {
+  if (state.isLoading) return;
+  state.isLoading = true;
+  const refreshBtn = document.getElementById("refresh-btn");
+  if (refreshBtn) refreshBtn.disabled = true;
+
+  const statusResult = await fetchJson("/api/status", MOCK_STATUS);
+  const reportsResult = await fetchJson("/api/reports?limit=20", MOCK_REPORTS);
+  state.status = statusResult.data;
+  state.reports = Array.isArray(reportsResult.data)
+    ? reportsResult.data
+    : reportsResult.data?.items ?? [];
+  state.statusSource = statusResult.source;
+  state.reportsSource = reportsResult.source;
+  renderStatus();
+  renderSummary();
+  renderHistory();
+  renderSource();
+  state.isLoading = false;
+  if (refreshBtn) refreshBtn.disabled = false;
+};
+
+const render = () => {
+  if (isAuthed()) {
+    renderDashboard();
+  } else {
+    renderLogin();
+  }
+};
+
+render();
+

@@ -18,6 +18,9 @@ env/
 .env.local
 .env.*.local
 
+# Frontend local config
+frontend/config.local.js
+
 # Database
 data/*.db
 data/*.db-journal
