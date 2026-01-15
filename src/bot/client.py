@@ -48,3 +48,4 @@ def get_bot() -> LLMGuardBot:
         _bot = LLMGuardBot()
     return _bot
 
+

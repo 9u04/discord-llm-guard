@@ -14,7 +14,7 @@ async def main() -> None:
 
     settings = get_settings()
 
-    data_dir = Path(settings.database_path).parent
+    data_dir = Path("data")
     data_dir.mkdir(parents=True, exist_ok=True)
 
     bot = get_bot()
@@ -28,4 +28,5 @@ async def main() -> None:
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 

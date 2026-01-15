@@ -20,7 +20,9 @@ class Settings(BaseSettings):
     llm_model: str = Field(default="gpt-4o", description="LLM model name")
 
     # Database
-    database_path: str = Field(default="data/bot.db", description="SQLite path")
+    database_url: str = Field(
+        default="sqlite:///./data/bot.db", description="Database URL"
+    )
 
     # Moderation
     history_message_limit: int = Field(default=10, description="History limit")
@@ -41,4 +43,5 @@ def get_settings() -> Settings:
     if _settings is None:
         _settings = Settings()
     return _settings
+
 
