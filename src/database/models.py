@@ -47,3 +47,15 @@ class ReportLog(Base):
     )
 
 
+class BotStatus(Base):
+    """Latest bot status heartbeat."""
+
+    __tablename__ = "bot_status"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    last_heartbeat: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    active_guilds: Mapped[int | None] = mapped_column(Integer)
+    queue_depth: Mapped[int | None] = mapped_column(Integer)
+

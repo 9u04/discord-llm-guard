@@ -28,6 +28,16 @@ class Settings(BaseSettings):
     history_message_limit: int = Field(default=10, description="History limit")
     ban_delete_days: int = Field(default=7, description="Ban delete days")
 
+    # Console API
+    console_app_title: str = Field(
+        default="Discord LLM Guard 控制台", description="Console title"
+    )
+    console_api_base_url: str | None = Field(
+        default=None, description="Console API base URL"
+    )
+    console_username: str | None = Field(default=None, description="Console username")
+    console_password: str | None = Field(default=None, description="Console password")
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

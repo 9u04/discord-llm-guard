@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, select, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.config import get_settings
-from src.database.models import Base, ReportLog
+from src.database.models import Base, BotStatus, ReportLog
 
 _engine = None
 _SessionLocal: sessionmaker[Session] | None = None
@@ -31,6 +31,17 @@ def _get_engine():
         _engine = create_engine(db_url, **engine_kwargs)
         _SessionLocal = sessionmaker(bind=_engine, expire_on_commit=False, class_=Session)
     return _engine
+
+
+def check_db_connection() -> bool:
+    """Check database connectivity."""
+    try:
+        engine = _get_engine()
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return True
+    except Exception:
+        return False
 
 
 def init_db() -> None:
@@ -98,5 +109,39 @@ class ReportRepository:
         report.error_message = error_message
         report.status = "DONE" if success else "FAILED"
         report.resolved_at = datetime.now(timezone.utc)
+
+    def list_reports(self, session: Session, limit: int = 20) -> list[ReportLog]:
+        stmt = select(ReportLog).order_by(ReportLog.created_at.desc()).limit(limit)
+        return list(session.scalars(stmt).all())
+
+
+class StatusRepository:
+    """Repository for bot status heartbeat."""
+
+    def upsert_status(
+        self, session: Session, active_guilds: int, queue_depth: int | None
+    ) -> None:
+        status = session.get(BotStatus, 1)
+        if status is None:
+            status = BotStatus(
+                id=1,
+                active_guilds=active_guilds,
+                queue_depth=queue_depth,
+                last_heartbeat=datetime.now(timezone.utc),
+            )
+            session.add(status)
+            return
+        status.active_guilds = active_guilds
+        status.queue_depth = queue_depth
+        status.last_heartbeat = datetime.now(timezone.utc)
+
+    def get_latest_status(self, session: Session) -> BotStatus | None:
+        return session.get(BotStatus, 1)
+
+    def is_online(self, status: BotStatus | None, ttl_seconds: int = 120) -> bool:
+        if status is None:
+            return False
+        now = datetime.now(timezone.utc)
+        return now - status.last_heartbeat <= timedelta(seconds=ttl_seconds)
 
 
