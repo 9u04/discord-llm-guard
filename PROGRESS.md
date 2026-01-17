@@ -249,6 +249,7 @@ BAN_DELETE_DAYS=7
 - 2026-01-17 (回滚 LLM 配置兼容与认证提示改动)
 - 2026-01-17 (人工审核固定提及 GM 用户 ID)
 - 2026-01-17 (清理仅 EOF 空行导致的伪修改)
+- 2026-01-17 (测试工具归档与 GitHub 忽略)
 
 ## 修改内容
 - ✅ **前端控制台雏形**：新增 `frontend/` 静态页面，包含登录、服务状态与处理历史视图
@@ -260,7 +261,7 @@ BAN_DELETE_DAYS=7
 - ✅ **环境变量注入**：新增 `frontend/api/config.js` 读取 Vercel 环境变量并注入前端
 - ✅ **运行时加载**：前端启动时读取 `/api/config` 覆盖账号密码与 API Base URL
 - ✅ **配置验证完成**：Discord Token 和 GM Role ID 已正确配置
-- ✅ **连接测试通过**：创建了 `test_bot_quick.py` 和 `test_bot_enhanced.py` 用于快速验证
+- ✅ **连接测试通过**：创建了 `testing/tools/test_bot_quick.py` 和 `testing/tools/test_bot_enhanced.py` 用于快速验证
 - ✅ **消息流程文档**：创建了完整的消息推送流程说明
   - `BOT_MESSAGE_FLOW.md` - 详细的流程图和说明
   - `BOT_MESSAGE_FLOW_CODE.py` - 完整的实现示例代码
@@ -274,7 +275,7 @@ BAN_DELETE_DAYS=7
 - ✅ **工具函数**：补充 bot mention 清理与默认举报理由
 - ✅ **LLM 实际接入**：使用 OpenAI 兼容 SDK 调用真实 LLM
 - ✅ **结果解析**：支持 JSON 解析与异常降级到 NEED_GM
-- ✅ **真实 LLM 测试**：新增 `scripts/llm_real_test.py` 与本地测试数据库
+- ✅ **真实 LLM 测试**：新增 `testing/scripts/llm_real_test.py` 与本地测试数据库
 - ✅ **JSON 输出保障**：LLM 调用优先使用 json_object 模式
 - ✅ **解析兜底**：非 JSON 输出时尝试关键词判定
 - ✅ **调试开关**：`LLM_DEBUG_RAW=1` 输出原始返回
@@ -302,6 +303,7 @@ BAN_DELETE_DAYS=7
 - ✅ **回滚变更**：撤回 LLM 配置别名与 AuthenticationError 提示改动
 - ✅ **人工审核提及**：NEED_GM 时固定提及指定 GM 用户 ID
 - ✅ **变动清理**：恢复仅包含 EOF 空行的文件变更，避免误判为大量改动
+- ✅ **测试归档**：测试脚本/文档集中至 `testing/` 并加入 GitHub 忽略
 
 ## 当前进度
 - 阶段一：基础框架（✅ 完成）
@@ -324,10 +326,10 @@ BAN_DELETE_DAYS=7
 ## 测试工具
 | 工具 | 功能 | 用途 |
 |-----|------|------|
-| `test_bot_quick.py` | 快速配置验证 | 检查 .env 文件是否正确配置 token 和 role id |
-| `test_bot_enhanced.py` | 详细连接测试 | 实际连接 Discord，验证 token 有效性和网络连接 |
-| `test_bot_connection.py` | 标准连接测试 | 标准的连接验证脚本 |
-| `scripts/llm_real_test.py` | 真实 LLM 测试 | 生成本地测试 DB 并验证 Prompt/解析 |
+| `testing/tools/test_bot_quick.py` | 快速配置验证 | 检查 .env 文件是否正确配置 token 和 role id |
+| `testing/tools/test_bot_enhanced.py` | 详细连接测试 | 实际连接 Discord，验证 token 有效性和网络连接 |
+| `testing/tools/test_bot_connection.py` | 标准连接测试 | 标准的连接验证脚本 |
+| `testing/scripts/llm_real_test.py` | 真实 LLM 测试 | 生成本地测试 DB 并验证 Prompt/解析 |
 
 ## 上下文快照
 - 采用 Python + discord.py + SQLAlchemy ORM
@@ -345,7 +347,7 @@ BAN_DELETE_DAYS=7
 - 数据库写入改为线程执行，避免阻塞 Bot 事件循环
 - 新增 FastAPI 控制台 API，提供状态/历史接口
 - Bot 会定时写入 `bot_status` 心跳，用于前端状态展示
-- 已提供真实 LLM 测试脚本，默认写入 `data/llm_real_test.db`
+- 已提供真实 LLM 测试脚本，默认写入 `testing/data/llm_real_test.db`
 - 已新增前端控制台静态页面，支持简单账号密码登录与状态/历史展示
 - 前端支持通过 Vercel 环境变量注入默认账号密码
 - PostgreSQL 已对 `report_logs` 的 Discord ID 字段做 BIGINT 兼容处理

@@ -25,6 +25,9 @@ frontend/config.local.js
 data/*.db
 data/*.db-journal
 
+# Testing
+testing/
+
 # IDE
 .idea/
 .vscode/
