@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     # Discord
     discord_token: str = Field(..., description="Discord Bot token")
     discord_gm_role_id: int = Field(..., description="GM role ID")
+    discord_gm_user_id: int = Field(
+        default=1396895180963057815, description="GM user ID"
+    )
 
     # LLM
     llm_api_key: str = Field(..., description="LLM API key")

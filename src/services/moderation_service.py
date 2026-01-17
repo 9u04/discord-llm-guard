@@ -109,7 +109,7 @@ async def handle_report(
         )
         return
 
-    gm_mention = f"<@&{settings.discord_gm_role_id}>"
+    gm_mention = f"<@{settings.discord_gm_user_id}>"
     try:
         await discord_service.send_channel_message(
             report_message.channel,
